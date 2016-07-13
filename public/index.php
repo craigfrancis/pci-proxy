@@ -11,6 +11,36 @@
 		);
 
 //--------------------------------------------------
+// Session
+
+	ini_set('session.use_only_cookies', true); // Prevent session fixation though the URL
+	ini_set('session.cookie_secure', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on'));
+	ini_set('session.cookie_httponly', true);
+	ini_set('session.use_strict_mode', true);
+
+	session_name('pci_session');
+
+	session_start();
+
+	if (!isset($_SESSION['data'])) {
+
+		$_SESSION['data'] = array(
+				'Start: ' . date('Y-m-d H:i:s'),
+			);
+
+	}
+
+	if (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI'] == '/data/' && count($_GET) == 0) {
+
+		header('Content-Type: application/json; charset=UTF-8');
+
+		echo json_encode($_SESSION['data']);
+
+		exit();
+
+	}
+
+//--------------------------------------------------
 // Supporting functions
 
 	function head($text) {
@@ -537,6 +567,13 @@
 
 						$response_data = $output;
 
+					}
+
+				//--------------------------------------------------
+				// Record interesting data
+
+					if ($host_full == 'https://api.worldpay.com' && $mime_type == 'application/json') {
+						$_SESSION['data'][] = $response_data;
 					}
 
 				//--------------------------------------------------
