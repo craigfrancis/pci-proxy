@@ -32,9 +32,35 @@
 
 	if (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI'] == '/data/' && count($_GET) == 0) {
 
-		header('Content-Type: application/json; charset=UTF-8');
+		echo '<!DOCTYPE html>
+				<html lang="en-GB" xml:lang="en-GB" xmlns="http://www.w3.org/1999/xhtml">
+				<head>
+					<meta charset="UTF-8" />
+					<title>Proxy Data</title>
+					<style>
+						strong.highlight {
+							color: #E00;
+						}
+					</style>
+				</head>
+				<body>
+					<ul>';
 
-		echo json_encode($_SESSION['data']);
+		foreach ($_SESSION['data'] as $data) {
+			$html = htmlentities($data);
+			$html = preg_replace('/((?:cardNumber|cvc)&quot;:&quot;)(.*?)(&quot;)/', '$1<strong class="highlight">$2</strong>$3', $html);
+			echo '
+						<li>' . $html . '</li>';
+		}
+
+		echo '
+					</ul>
+				</body>
+				</html>';
+
+		$_SESSION['data'] = array(
+				'Start: ' . date('Y-m-d H:i:s'),
+			);
 
 		exit();
 
@@ -415,6 +441,13 @@
 					$request_data = file_get_contents('php://input');
 
 				//--------------------------------------------------
+				// Record interesting data
+
+					if ($host_full == 'https://api.worldpay.com' && $mime_type == 'application/json') {
+						$_SESSION['data'][] = $request_data;
+					}
+
+				//--------------------------------------------------
 				// Request body
 
 					$request_body = implode("\r\n", $request_headers) . "\r\n\r\n";
@@ -567,13 +600,6 @@
 
 						$response_data = $output;
 
-					}
-
-				//--------------------------------------------------
-				// Record interesting data
-
-					if ($host_full == 'https://api.worldpay.com' && $mime_type == 'application/json') {
-						$_SESSION['data'][] = $response_data;
 					}
 
 				//--------------------------------------------------
