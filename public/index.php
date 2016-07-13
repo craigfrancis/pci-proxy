@@ -1,6 +1,16 @@
 <?php
 
 //--------------------------------------------------
+// Config
+
+	$domain_white_list = array(
+			'https://www.example.com',
+			'https://api.worldpay.com',
+			'https://cdn.worldpay.com',
+			'https://online.worldpay.com',
+		);
+
+//--------------------------------------------------
 // Supporting functions
 
 	function head($text) {
@@ -170,6 +180,10 @@
 		$host_full = trim($_GET['host']);
 
 		if ($host_full != '') {
+
+			if (!in_array($host_full, $domain_white_list)) {
+				exit('<p>I\'m sorry, but I\'m not allowing this to be a full proxy service.</p>');
+			}
 
 			$host_parts = parse_url($host_full);
 
