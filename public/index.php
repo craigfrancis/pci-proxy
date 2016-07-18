@@ -31,7 +31,7 @@
 	ini_set('session.cookie_httponly', true);
 	ini_set('session.use_strict_mode', true);
 
-	session_name('pci_session');
+	session_name('proxy_session');
 
 	session_start();
 
