@@ -11,13 +11,6 @@
 			'cdn.worldpay.com',
 			'online.worldpay.com',
 
-			'checkout.stripe.com',
-
-			'js.braintreegateway.com',
-			'api.sandbox.braintreegateway.com',
-			'client-analytics.sandbox.braintreegateway.com',
-			'assets.braintreegateway.com',
-
 		);
 
 	$request_uri = (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '/');
@@ -835,8 +828,8 @@
 
 							$response_data = preg_replace('/Worldpay\.api_path\+"tokens\/?"/', '"' . host_url_create('https://api.worldpay.com/v1/tokens/') . '&"', $response_data);
 
-							$response_data = str_replace('localhost', 'org.uk', $response_data); // BrainTree legalHosts (top level domain)
-							$response_data = str_replace('this._isVerbose=!1,', 'this._isVerbose=1,', $response_data); // BrainTree set _isVerbose to true
+							// $response_data = str_replace('localhost', 'org.uk', $response_data); // BrainTree legalHosts (top level domain)
+							// $response_data = str_replace('this._isVerbose=!1,', 'this._isVerbose=1,', $response_data); // BrainTree set _isVerbose to true
 
 							// $response_data = str_replace('assets.braintreegateway.com', (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ''), $response_data);
 
