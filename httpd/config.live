@@ -1,0 +1,46 @@
+#--------------------------------------------------
+# Craig Proxy
+#--------------------------------------------------
+
+	<VirtualHost *:443>
+
+		ServerName proxy.krang.org.uk
+
+		DocumentRoot /www/live/craig.proxy/public
+
+		CustomLog /www/live/craig.proxy/logs/access_log combined
+		ErrorLog /www/live/craig.proxy/logs/error_log
+
+		# Header always set X-Frame-Options: SAMEORIGIN
+		Header always set X-XSS-Protection: "1; mode=block"
+		Header always set X-Content-Type-Options: nosniff
+		Header always set Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+		# Header always set Cross-Origin-Resource-Policy: "same-origin"
+		# Header always set Cross-Origin-Window-Policy: "DENY"
+		Header always set Referrer-Policy: "strict-origin-when-cross-origin"
+		Header always set Cache-Control "immutable" env=immutable
+
+		RewriteEngine on
+
+		RewriteRule ^/\.well-known/acme-challenge/(.*)$ /etc/acme/public/$1 [L]
+
+		RewriteRule ^(.*) /www/live/craig.proxy/public/index.php [QSA,L]
+
+		SSLEngine On
+		SSLCertificateFile /etc/apache2/tls/code-poets.co.uk.crt
+		SSLCertificateKeyFile /etc/apache2/tls/code-poets.co.uk.key
+
+	</VirtualHost>
+
+#--------------------------------------------------
+# Craig Proxy (Redirect)
+#--------------------------------------------------
+
+	<VirtualHost *:80>
+
+		ServerName proxy.krang.org.uk
+
+		RewriteEngine on
+		RewriteRule   ^(.*)  https://proxy.krang.org.uk$1  [R=301,L]
+
+	</VirtualHost>
