@@ -381,6 +381,7 @@
 							);
 
 						$source_referrer = NULL;
+						$request_mime_type = NULL;
 
 						foreach (apache_request_headers() as $header => $value) {
 
