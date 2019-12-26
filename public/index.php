@@ -369,6 +369,24 @@
 					//--------------------------------------------------
 					// Extra headers
 
+							// https://gist.github.com/rmpel/11583cfddfcc9705578428e3a2ee3dc1
+							// https://www.iana.org/assignments/message-headers/message-headers.xml#perm-headers
+
+						$headers_cased = [
+								// HTTP
+								'Dasl'             => 'DASL',
+								'Dav'              => 'DAV',
+								'Etag'             => 'ETag',
+								'Mime-Version'     => 'MIME-Version',
+								'Slug'             => 'SLUG',
+								'Te'               => 'TE',
+								'Www-Authenticate' => 'WWW-Authenticate',
+								// MIME
+								'Content-Md5'      => 'Content-MD5',
+								'Content-Id'       => 'Content-ID',
+								'Content-Features' => 'Content-features',
+							];
+
 						$header_blacklist = array(
 								'host',
 								'connection',
@@ -383,9 +401,13 @@
 						$source_referrer = NULL;
 						$request_mime_type = NULL;
 
-						foreach (apache_request_headers() as $header => $value) {
+						foreach ($_SERVER as $config_name => $value) {
 
-							$header_lower = strtolower($header);
+							if (substr($config_name, 0, 5) !== 'HTTP_') {
+								continue;
+							}
+
+							$header_lower = strtolower(substr($config_name, 5));
 
 							if ($header_lower == 'referer') {
 
@@ -393,7 +415,19 @@
 
 							} else if (!in_array($header_lower, $header_blacklist)) {
 
-								$request_headers[] = $header . ': ' . $value;
+								if (substr_count($header_lower, '_') > 0) {
+									$header_name = explode('_', $header_lower);
+									$header_name = array_map('ucfirst', $header_name);
+									$header_name = implode('-', $header_name);
+								} else {
+									$header_name = ucfirst($header_lower);
+								}
+
+								if (array_key_exists($header_name, $headers_cased)) {
+									$header_name = $headers_cased[$header_name];
+								}
+
+								$request_headers[] = $header_name . ': ' . $value;
 
 								if ($header_lower == 'content-type') {
 									$request_mime_type = $value;
