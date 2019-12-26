@@ -387,7 +387,7 @@
 								'Content-Features' => 'Content-features',
 							];
 
-						$header_blacklist = array(
+						$header_blacklist = [
 								'host',
 								'connection',
 								'authorization',
@@ -396,45 +396,67 @@
 								'accept-encoding',
 								'if-modified-since', // Being lazy, kill the cache
 								'if-none-match',
-							);
+							];
 
 						$source_referrer = NULL;
-						$request_mime_type = NULL;
+						$request_content_type = NULL;
+						$request_content_length = NULL;
 
 						foreach ($_SERVER as $config_name => $value) {
 
-							if (substr($config_name, 0, 5) !== 'HTTP_') {
-								continue;
-							}
+							//--------------------------------------------------
+							// Name, in the correct case
 
-							$header_lower = strtolower(substr($config_name, 5));
+								if (substr($config_name, 0, 5) !== 'HTTP_') {
+									continue;
+								}
 
-							if ($header_lower == 'referer') {
+								$header_name = strtolower(substr($config_name, 5));
 
-								$source_referrer = $value;
-
-							} else if (!in_array($header_lower, $header_blacklist)) {
-
-								if (substr_count($header_lower, '_') > 0) {
-									$header_name = explode('_', $header_lower);
+								if (substr_count($header_name, '_') > 0) {
+									$header_name = explode('_', $header_name);
 									$header_name = array_map('ucfirst', $header_name);
 									$header_name = implode('-', $header_name);
 								} else {
-									$header_name = ucfirst($header_lower);
+									$header_name = ucfirst($header_name);
 								}
 
 								if (array_key_exists($header_name, $headers_cased)) {
 									$header_name = $headers_cased[$header_name];
 								}
 
-								$request_headers[] = $header_name . ': ' . $value;
+							//--------------------------------------------------
+							// Process
 
-								if ($header_lower == 'content-type') {
-									$request_mime_type = $value;
+								$header_lower = strtolower($header_name);
+
+								if ($header_lower == 'referer') {
+
+									$source_referrer = $value;
+
+								} else if (!in_array($header_lower, $header_blacklist)) {
+
+									$request_headers[] = $header_name . ': ' . $value;
+
+									if ($header_lower == 'content-type')   $request_content_type = $value;
+									if ($header_lower == 'content-length') $request_content_length = $value;
+
 								}
 
-							}
+						}
 
+						if ($request_content_type === NULL) {
+							$request_content_type = ($_SERVER['CONTENT_TYPE'] ?? NULL);
+							if ($request_content_type) {
+								$request_headers[] = 'Content-Type: ' . $request_content_type;
+							}
+						}
+
+						if ($request_content_length === NULL) {
+							$request_content_length = ($_SERVER['CONTENT_LENGTH'] ?? NULL);
+							if ($request_content_length) {
+								$request_headers[] = 'Content-Length: ' . $request_content_length;
+							}
 						}
 
 					//--------------------------------------------------
@@ -497,7 +519,7 @@
 				//--------------------------------------------------
 				// Record interesting data
 
-					if ($host_full == 'https://api.worldpay.com' && $request_mime_type == 'application/json') {
+					if ($host_full == 'https://api.worldpay.com' && $request_content_type == 'application/json') {
 						$_SESSION['data'][] = $request_data;
 					}
 
